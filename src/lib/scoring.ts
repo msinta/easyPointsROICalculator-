@@ -16,37 +16,28 @@ export function scoreTeam(
 
     const myGoals = (isHome ? match.home_goals : match.away_goals) ?? 0;
     const theirGoals = (isHome ? match.away_goals : match.home_goals) ?? 0;
-    const myPen = isHome ? match.home_penalty_goals : match.away_penalty_goals;
-    const theirPen = isHome ? match.away_penalty_goals : match.home_penalty_goals;
 
-    const scored = myGoals + myPen;
-    const conceded = theirGoals + theirPen;
-
-    points += scored;
-    points -= conceded;
-    goals += scored;
-
-    const hasPenalties = myPen > 0 || theirPen > 0;
+    // Goals tracked only as tiebreaker — they do NOT add points
+    goals += myGoals;
 
     if (myGoals > theirGoals) {
-      points += 3;
+      points += 2; // Win
     } else if (myGoals === theirGoals) {
-      if (hasPenalties) {
-        if (myPen > theirPen) points += 3;
-      } else {
-        points += 1;
-      }
+      points += 1; // Draw
     }
+    // Loss: 0
   }
 
   const adv = advancements.find((a) => a.team_id === team.id);
   if (adv) {
-    if (adv.advanced_to_round_32) points += 2;
-    if (adv.advanced_to_round_16) points += 2;
-    if (adv.advanced_to_quarters) points += 3;
-    if (adv.advanced_to_semis) points += 4;
-    if (adv.advanced_to_final) points += 5;
-    if (adv.won_world_cup) points += 10;
+    if (adv.finished_second_in_group) points += 4;
+    if (adv.finished_first_in_group) points += 6;
+    if (adv.advanced_to_round_32) points += 3;
+    if (adv.advanced_to_round_16) points += 8;
+    if (adv.advanced_to_quarters) points += 10;
+    if (adv.advanced_to_semis) points += 12;
+    if (adv.advanced_to_final) points += 15;
+    if (adv.won_world_cup) points += 25;
   }
 
   return { points, goals };

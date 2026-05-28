@@ -158,8 +158,6 @@ function MatchesAdmin() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [scoreForm, setScoreForm] = useState({
     home_goals: "", away_goals: "",
-    home_penalty_goals: "0", away_penalty_goals: "0",
-    hasPenalties: false,
   });
 
   const load = useCallback(async () => {
@@ -194,15 +192,11 @@ function MatchesAdmin() {
   async function saveScore(matchId: string) {
     const hg = parseInt(scoreForm.home_goals);
     const ag = parseInt(scoreForm.away_goals);
-    const hp = scoreForm.hasPenalties ? parseInt(scoreForm.home_penalty_goals) : 0;
-    const ap = scoreForm.hasPenalties ? parseInt(scoreForm.away_penalty_goals) : 0;
     if (isNaN(hg) || isNaN(ag)) return;
 
     await supabase.from("matches").update({
       home_goals: hg,
       away_goals: ag,
-      home_penalty_goals: hp,
-      away_penalty_goals: ap,
       is_completed: true,
     }).eq("id", matchId);
 
@@ -298,10 +292,7 @@ function MatchesAdmin() {
                 <div className="flex items-center gap-2">
                   {match.is_completed ? (
                     <span className="text-sm font-bold text-green-700">
-                      {match.home_goals}–{match.away_goals}
-                      {(match.home_penalty_goals > 0 || match.away_penalty_goals > 0) &&
-                        ` (${match.home_penalty_goals}–${match.away_penalty_goals} pens)`}
-                      {" "}✓
+                      {match.home_goals}–{match.away_goals} ✓
                     </span>
                   ) : (
                     <span className="text-xs text-gray-400">Pending</span>
@@ -312,9 +303,6 @@ function MatchesAdmin() {
                       setScoreForm({
                         home_goals: match.home_goals?.toString() ?? "",
                         away_goals: match.away_goals?.toString() ?? "",
-                        home_penalty_goals: match.home_penalty_goals?.toString() ?? "0",
-                        away_penalty_goals: match.away_penalty_goals?.toString() ?? "0",
-                        hasPenalties: (match.home_penalty_goals ?? 0) > 0 || (match.away_penalty_goals ?? 0) > 0,
                       });
                     }}
                     className="text-xs text-blue-500 hover:text-blue-700"
@@ -355,39 +343,6 @@ function MatchesAdmin() {
                     </div>
                   </div>
 
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={scoreForm.hasPenalties}
-                      onChange={(e) => setScoreForm({ ...scoreForm, hasPenalties: e.target.checked })}
-                      className="rounded"
-                    />
-                    Penalty shootout
-                  </label>
-
-                  {scoreForm.hasPenalties && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">{home?.name} Penalties</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={scoreForm.home_penalty_goals}
-                          onChange={(e) => setScoreForm({ ...scoreForm, home_penalty_goals: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">{away?.name} Penalties</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={scoreForm.away_penalty_goals}
-                          onChange={(e) => setScoreForm({ ...scoreForm, away_penalty_goals: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  )}
-
                   <Button
                     onClick={() => saveScore(match.id)}
                     className="bg-green-600 hover:bg-green-700 text-white text-sm"
@@ -407,6 +362,8 @@ function MatchesAdmin() {
 // ─── Advancement ─────────────────────────────────────────────────────────────
 
 const ADV_STAGES: { key: keyof Omit<TeamAdvancement, "team_id">; label: string }[] = [
+  { key: "finished_second_in_group", label: "2nd" },
+  { key: "finished_first_in_group", label: "1st" },
   { key: "advanced_to_round_32", label: "R32" },
   { key: "advanced_to_round_16", label: "R16" },
   { key: "advanced_to_quarters", label: "QF" },
@@ -440,6 +397,8 @@ function AdvancementAdmin() {
     const newVal = !existing?.[key];
     const updated = {
       team_id: team.id,
+      finished_second_in_group: existing?.finished_second_in_group ?? false,
+      finished_first_in_group: existing?.finished_first_in_group ?? false,
       advanced_to_round_32: existing?.advanced_to_round_32 ?? false,
       advanced_to_round_16: existing?.advanced_to_round_16 ?? false,
       advanced_to_quarters: existing?.advanced_to_quarters ?? false,

@@ -147,16 +147,16 @@ export function Leaderboard() {
         <p className="font-semibold text-gray-800 mb-3">📋 Scoring Rules</p>
         <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-gray-600">
           {[
-            ["Win", "+3"],
+            ["Win", "+2"],
             ["Draw", "+1"],
-            ["Goal scored (incl. penalties)", "+1"],
-            ["Goal conceded (incl. penalties)", "−1"],
-            ["Advance to Round of 32", "+2"],
-            ["Advance to Round of 16", "+2"],
-            ["Advance to Quarter-Finals", "+3"],
-            ["Advance to Semi-Finals", "+4"],
-            ["Advance to the Final", "+5"],
-            ["Win the World Cup", "+10"],
+            ["Finish 2nd in group", "+4"],
+            ["Finish 1st in group", "+6"],
+            ["Advance to Round of 32", "+3"],
+            ["Advance to Round of 16", "+8"],
+            ["Advance to Quarter-Finals", "+10"],
+            ["Advance to Semi-Finals", "+12"],
+            ["Advance to the Final", "+15"],
+            ["Win the World Cup", "+25"],
           ].map(([label, pts]) => (
             <div key={label} className="flex justify-between col-span-1">
               <span>{label}</span>
@@ -169,7 +169,7 @@ export function Leaderboard() {
           ))}
         </div>
         <p className="mt-3 text-xs text-gray-400">
-          Tiebreaker: most goals scored by selected teams. If still tied, winnings are split equally.
+          Goals do not count toward points. Tiebreaker: most goals scored by selected teams. If still tied, winnings split equally.
           Prize split: 60% / 30% / 10%.
         </p>
       </div>

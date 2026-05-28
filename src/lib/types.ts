@@ -37,6 +37,8 @@ export interface Match {
 
 export interface TeamAdvancement {
   team_id: string;
+  finished_second_in_group: boolean;
+  finished_first_in_group: boolean;
   advanced_to_round_32: boolean;
   advanced_to_round_16: boolean;
   advanced_to_quarters: boolean;
