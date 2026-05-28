@@ -17,6 +17,7 @@ interface Props {
   participantId: string;
   onSuccess: () => void;
   existingEntryCount: number;
+  editEntry?: { id: string; entry_name: string; teams?: Team[] };
 }
 
 type LevelSelections = Record<number, string[]>;
@@ -27,7 +28,9 @@ export function NewEntryModal({
   participantId,
   onSuccess,
   existingEntryCount,
+  editEntry,
 }: Props) {
+  const isEditing = !!editEntry;
   const [teams, setTeams] = useState<Team[]>([]);
   const [entryName, setEntryName] = useState("");
   const [selected, setSelected] = useState<LevelSelections>({
@@ -44,10 +47,20 @@ export function NewEntryModal({
       .order("level")
       .order("name")
       .then(({ data }) => setTeams(data ?? []));
-    setSelected({ 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] });
-    setEntryName("");
+
+    if (editEntry) {
+      setEntryName(editEntry.entry_name ?? "");
+      const preSelected: LevelSelections = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+      (editEntry.teams ?? []).forEach((t) => {
+        preSelected[t.level] = [...(preSelected[t.level] ?? []), t.id];
+      });
+      setSelected(preSelected);
+    } else {
+      setSelected({ 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] });
+      setEntryName("");
+    }
     setError("");
-  }, [open]);
+  }, [open, editEntry]);
 
   function toggleTeam(team: Team) {
     const lvl = selected[team.level] ?? [];
@@ -70,29 +83,49 @@ export function NewEntryModal({
     setLoading(true);
     setError("");
 
-    const name = entryName.trim() || `Entry ${existingEntryCount + 1}`;
+    const rows = Object.values(selected).flat();
 
-    const { data: entry, error: entryErr } = await supabase
-      .from("entries")
-      .insert({ participant_id: participantId, entry_name: name })
-      .select("id")
-      .single();
-
-    if (entryErr || !entry) {
-      setError("Failed to create entry. Please try again.");
-      setLoading(false);
-      return;
-    }
-
-    const rows = Object.values(selected)
-      .flat()
-      .map((team_id) => ({ entry_id: entry.id, team_id }));
-
-    const { error: teamsErr } = await supabase.from("entry_teams").insert(rows);
-    if (teamsErr) {
-      setError("Failed to save team selections. Please try again.");
-      setLoading(false);
-      return;
+    if (isEditing && editEntry) {
+      // Delete existing team selections, then re-insert
+      const { error: delErr } = await supabase
+        .from("entry_teams")
+        .delete()
+        .eq("entry_id", editEntry.id);
+      if (delErr) {
+        setError("Failed to update entry. Please try again.");
+        setLoading(false);
+        return;
+      }
+      const name = entryName.trim() || editEntry.entry_name;
+      await supabase.from("entries").update({ entry_name: name }).eq("id", editEntry.id);
+      const { error: teamsErr } = await supabase
+        .from("entry_teams")
+        .insert(rows.map((team_id) => ({ entry_id: editEntry.id, team_id })));
+      if (teamsErr) {
+        setError("Failed to save team selections. Please try again.");
+        setLoading(false);
+        return;
+      }
+    } else {
+      const name = entryName.trim() || `Entry ${existingEntryCount + 1}`;
+      const { data: entry, error: entryErr } = await supabase
+        .from("entries")
+        .insert({ participant_id: participantId, entry_name: name })
+        .select("id")
+        .single();
+      if (entryErr || !entry) {
+        setError("Failed to create entry. Please try again.");
+        setLoading(false);
+        return;
+      }
+      const { error: teamsErr } = await supabase
+        .from("entry_teams")
+        .insert(rows.map((team_id) => ({ entry_id: entry.id, team_id })));
+      if (teamsErr) {
+        setError("Failed to save team selections. Please try again.");
+        setLoading(false);
+        return;
+      }
     }
 
     onSuccess();
@@ -104,7 +137,7 @@ export function NewEntryModal({
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>New Entry — Pick Your 12 Teams</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit Entry" : "New Entry"} — Pick Your 12 Teams</DialogTitle>
           <p className="text-sm text-gray-500">
             Choose exactly 2 teams from each level ({totalSelected}/12 selected).
           </p>
@@ -180,9 +213,9 @@ export function NewEntryModal({
             disabled={loading || !allSelected}
           >
             {loading
-              ? "Submitting…"
+              ? (isEditing ? "Saving…" : "Submitting…")
               : allSelected
-              ? "Submit Entry ✓"
+              ? (isEditing ? "Save Changes ✓" : "Submit Entry ✓")
               : `Select ${12 - totalSelected} more team${12 - totalSelected !== 1 ? "s" : ""}`}
           </Button>
         </form>

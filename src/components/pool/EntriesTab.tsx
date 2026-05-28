@@ -12,6 +12,7 @@ export function EntriesTab({ session }: Props) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
+  const [editEntry, setEditEntry] = useState<Entry | null>(null);
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -97,6 +98,7 @@ export function EntriesTab({ session }: Props) {
                 session?.type === "participant" &&
                 entry.participant_id === session.id
               }
+              onEdit={() => setEditEntry(entry)}
             />
           ))}
         </div>
@@ -104,18 +106,19 @@ export function EntriesTab({ session }: Props) {
 
       {session?.type === "participant" && (
         <NewEntryModal
-          open={showNew}
-          onClose={() => setShowNew(false)}
+          open={showNew || !!editEntry}
+          onClose={() => { setShowNew(false); setEditEntry(null); }}
           participantId={session.id}
           onSuccess={load}
           existingEntryCount={myEntries.length}
+          editEntry={editEntry ?? undefined}
         />
       )}
     </div>
   );
 }
 
-function EntryCard({ entry, isOwn }: { entry: Entry; isOwn: boolean }) {
+function EntryCard({ entry, isOwn, onEdit }: { entry: Entry; isOwn: boolean; onEdit: () => void }) {
   const teams = (entry.teams ?? []) as Team[];
   const byLevel = [1, 2, 3, 4, 5, 6].map((lvl) => ({
     level: lvl,
@@ -140,9 +143,17 @@ function EntryCard({ entry, isOwn }: { entry: Entry; isOwn: boolean }) {
           </p>
         </div>
         {isOwn && (
-          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium shrink-0">
-            Mine
-          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={onEdit}
+              className="text-xs text-blue-500 hover:text-blue-700 font-medium"
+            >
+              Edit
+            </button>
+            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+              Mine
+            </span>
+          </div>
         )}
       </div>
 
